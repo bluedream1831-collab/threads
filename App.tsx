@@ -49,6 +49,18 @@ const App: React.FC = () => {
     return contentMatch || tagMatch;
   });
 
+  // Dynamic placeholder based on scene
+  const getPlaceholder = (s: Scene) => {
+    switch (s) {
+      case Scene.WORK: return "例如：週一症候群、慣老闆、想離職...";
+      case Scene.RELATIONSHIP: return "例如：曖昧對象、前任、單身...";
+      case Scene.DAILY: return "例如：天氣、晚餐吃什麼、失眠...";
+      case Scene.WEEKEND: return "例如：宅在家、咖啡廳、不想收假...";
+      case Scene.TRENDING: return "例如：奧運、AI話題、最新迷因、颱風...";
+      default: return "例如：生活瑣事...";
+    }
+  };
+
   return (
     <div className="min-h-screen bg-black text-white font-sans selection:bg-neutral-700 selection:text-white pb-20">
       {/* Toast Notification */}
@@ -121,7 +133,7 @@ const App: React.FC = () => {
              <label className="text-neutral-500 text-xs font-bold uppercase tracking-wider mb-2 block">自訂主題 (選填)</label>
              <input 
                 type="text" 
-                placeholder="例如：週一症候群、想喝珍奶..." 
+                placeholder={getPlaceholder(scene)}
                 value={customTopic}
                 onChange={(e) => setCustomTopic(e.target.value)}
                 className="w-full bg-neutral-900 border border-neutral-800 rounded-lg px-4 py-3 text-white placeholder-neutral-600 focus:outline-none focus:border-neutral-500 transition-colors"
