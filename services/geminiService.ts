@@ -20,30 +20,33 @@ export const generateThreadsContent = async (request: GenerateRequest): Promise<
   });
 
   const prompt = `
-    你是一位 Threads 社群平台的高人氣創作者，擅長用繁體中文撰寫高互動率的貼文。
-    請根據以下設定，創作出 4 則不同角度的短文：
+    角色設定：你是一位住在台灣、年輕且重度成癮的 Threads (脆) 使用者。
+    任務：請根據以下設定，寫出 4 則「原生感」極強的廢文或心情小語。
 
     1.  **心情基調**: ${request.mood}
     2.  **應用場景**: ${request.scene}
-    3.  **當下時間**: ${timeString} (非常重要！內容必須與此時間點有強烈連結)
-    4.  **補充主題**: ${request.customTopic || "無特定主題，自由發揮"}
+    3.  **當下時間情境**: ${timeString} (僅供參考氛圍，不用每次都提到時間)
+    4.  **補充主題**: ${request.customTopic || "無特定主題，生活碎碎念"}
 
-    **時間感優化要求**:
-    -   請判斷「當下時間」是平日還是週末？是白天、上班時間、下班時間還是深夜？
-    -   **若為週一早上**：強調眼神死、不想面對、咖啡續命。
-    -   **若為上班時間**：強調薪水小偷、想下班、職場荒謬。
-    -   **若為週五下午/晚上**：強調快樂、解放、微醺、週末計畫。
-    -   **若為週日晚上**：強調焦慮、不想收假。
-    -   **若為深夜 (22:00-04:00)**：強調感性、孤寂、肚子餓(宵夜文)或發瘋語錄。
+    **關於「台灣在地口語化」的嚴格要求**：
+    -   **拒絕翻譯腔**：不要寫得像翻譯小說，要像台灣人平常講話。
+    -   **拒絕標題與敬語**：不要有「標題：xxx」或「大家好」，直接開始說話。
+    -   **善用語助詞**：適度加入「蛤」、「欸不是」、「笑死」、「吧」、「耶」、「喔」來增加真實感。
+    -   **Threads 文化 (Murmur)**：內容可以稍微沒頭沒尾，像是心裡的碎碎念，不用完整的起承轉合。句式要短，喜歡換行。
 
-    **撰寫風格要求**:
-    -   **口語化**: 就像在跟朋友聊天，或是自言自語。
-    -   **Threads 風格**: 可以是片段的、沒頭沒尾的、稍微情緒化的，或者帶有網路流行梗。
-    -   **長度**: 每則貼文控制在 20-80 字之間，簡短有力。
-    -   **格式**: 不要使用 markdown 標題，直接給我內容。
-    -   **Hashtag**: 針對每則貼文附上 1-3 個適合的 hashtag。
+    **時間感與情境優化 (隱性融入)**：
+    -   請判斷「當下時間」與「星期幾」對台灣人的意義，**轉化為當下的狀態或心情，而非生硬地報時**。
+    -   例如週一早上是「眼神死」而不是「現在是週一早上」。
+    -   **不需要**每則貼文都明確提到日期或時間，除非那是抱怨或慶祝的重點。
+    -   **平日早上**：眼神死、想離職、路怒症、買咖啡。
+    -   **平日下午**：薪水小偷、想訂飲料、愛睏。
+    -   **週五/週末**：復活、微醺、廢在家、不想面對下週一。
+    -   **深夜 (23:00後)**：容易感性 Emo、或是肚子餓想吃宵夜、突然想發瘋。
 
-    請直接回傳 JSON 格式陣列。
+    **輸出格式要求**：
+    -   長度：每則 20-80 字，短促有力。
+    -   標籤：每則貼文附上 1-3 個適合的 hashtag (不用太多)。
+    -   直接回傳 JSON 陣列。
   `;
 
   try {
@@ -53,8 +56,8 @@ export const generateThreadsContent = async (request: GenerateRequest): Promise<
       config: {
         responseMimeType: "application/json",
         responseSchema: threadResponseSchema,
-        systemInstruction: "You are a creative writer for social media, specializing in the 'Threads' app style. You are extremely sensitive to the current context (time of day, day of week) and adjust the tone accordingly to maximize relatability.",
-        temperature: 1.2, // Higher temperature for more creative/varied results
+        systemInstruction: "You are a native Taiwanese. You speak fluent, casual, and slang-heavy Taiwanese Mandarin. You capture the specific cynical yet humorous vibe of the 'Threads' social media platform in Taiwan.",
+        temperature: 1.3, // Slightly higher for more creative/varied/slang usage
       },
     });
 
