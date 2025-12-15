@@ -19,6 +19,7 @@ export enum Scene {
 
 export enum ImageStyle {
   DEFAULT = "預設氛圍",
+  ANIMATED = "動態迷因 (GIF)",
   JAPANESE = "日系空氣感",
   KOREAN = "韓系奶油",
   REALISTIC = "超寫實攝影",
@@ -30,6 +31,12 @@ export enum ImageStyle {
 export interface ThreadPost {
   content: string;
   tags: string[];
+}
+
+export interface ScheduledPost extends ThreadPost {
+  id: string;
+  scheduledTime: string; // e.g., "明天早上 9:00"
+  createdAt: number;
 }
 
 export interface GenerateRequest {

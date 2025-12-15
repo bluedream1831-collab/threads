@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { generateThreadsContent } from './services/geminiService';
-import { Mood, Scene, ThreadPost } from './types';
+import { Mood, Scene, ThreadPost, ScheduledPost } from './types';
 import ThreadCard from './components/ThreadCard';
 
 const App: React.FC = () => {
@@ -14,6 +14,9 @@ const App: React.FC = () => {
   
   // Search state
   const [searchQuery, setSearchQuery] = useState<string>('');
+
+  // Scheduled Posts State
+  const [scheduledPosts, setScheduledPosts] = useState<ScheduledPost[]>([]);
 
   const handleGenerate = async () => {
     setLoading(true);
@@ -39,6 +42,22 @@ const App: React.FC = () => {
     navigator.clipboard.writeText(text);
     setToast("已複製到剪貼簿！");
     setTimeout(() => setToast(null), 2000);
+  };
+
+  const handleAddToSchedule = (post: ThreadPost, time: string) => {
+    const newScheduledPost: ScheduledPost = {
+      ...post,
+      id: Date.now().toString(),
+      scheduledTime: time,
+      createdAt: Date.now()
+    };
+    setScheduledPosts(prev => [newScheduledPost, ...prev]);
+    setToast(`已加入排程：${time}`);
+    setTimeout(() => setToast(null), 2000);
+  };
+
+  const removeScheduledPost = (id: string) => {
+      setScheduledPosts(prev => prev.filter(p => p.id !== id));
   };
 
   // Filter results based on search query
@@ -168,7 +187,7 @@ const App: React.FC = () => {
         )}
 
         {results.length > 0 && (
-          <div className="animate-fade-in">
+          <div className="animate-fade-in mb-12">
              <div className="mb-4">
                  <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
@@ -203,7 +222,14 @@ const App: React.FC = () => {
              <div className="space-y-4">
                {filteredResults.length > 0 ? (
                    filteredResults.map((post, index) => (
-                     <ThreadCard key={index} post={post} mood={mood} scene={scene} onCopy={copyToClipboard} />
+                     <ThreadCard 
+                        key={index} 
+                        post={post} 
+                        mood={mood} 
+                        scene={scene} 
+                        onCopy={copyToClipboard}
+                        onSchedule={handleAddToSchedule}
+                     />
                    ))
                ) : (
                    <div className="text-center py-10 border border-neutral-800 border-dashed rounded-xl">
@@ -212,16 +238,46 @@ const App: React.FC = () => {
                    </div>
                )}
              </div>
-             
-             {filteredResults.length > 0 && (
-                 <div className="mt-8 text-center">
-                    <p className="text-neutral-600 text-sm">喜歡這些內容嗎？點擊卡片右上角按鈕複製。</p>
-                 </div>
-             )}
           </div>
         )}
 
-        {results.length === 0 && !loading && !error && (
+        {/* Scheduled Posts Section */}
+        {scheduledPosts.length > 0 && (
+            <div className="animate-fade-in border-t border-neutral-800 pt-8 mt-8">
+                <h2 className="text-white font-bold text-lg mb-4 flex items-center gap-2">
+                    <span>📅</span> 排程清單 ({scheduledPosts.length})
+                </h2>
+                <div className="space-y-4">
+                    {scheduledPosts.map((post) => (
+                        <div key={post.id} className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4 relative">
+                             <div className="flex justify-between items-center mb-2">
+                                 <span className="text-purple-400 text-xs font-bold border border-purple-500/30 bg-purple-500/10 px-2 py-0.5 rounded-full">
+                                    {post.scheduledTime}
+                                 </span>
+                                 <button 
+                                    onClick={() => removeScheduledPost(post.id)}
+                                    className="text-neutral-500 hover:text-red-400 text-xs"
+                                 >
+                                    刪除
+                                 </button>
+                             </div>
+                             <p className="text-neutral-300 text-sm mb-2">{post.content}</p>
+                             <div className="flex gap-2 mb-3">
+                                {post.tags.map(t => <span key={t} className="text-neutral-500 text-xs">#{t}</span>)}
+                             </div>
+                             <button 
+                                onClick={() => copyToClipboard(`${post.content}\n\n${post.tags.map(t => `#${t}`).join(' ')}`)}
+                                className="w-full bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-xs py-2 rounded-lg transition-colors"
+                             >
+                                複製內容
+                             </button>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        )}
+
+        {results.length === 0 && !loading && !error && scheduledPosts.length === 0 && (
             <div className="text-center py-12 opacity-30">
                 <div className="w-16 h-16 bg-neutral-800 rounded-full mx-auto mb-4 flex items-center justify-center">
                     <span className="text-2xl">💭</span>

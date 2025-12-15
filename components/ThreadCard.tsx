@@ -7,9 +7,10 @@ interface ThreadCardProps {
   mood: Mood;
   scene: Scene;
   onCopy: (text: string) => void;
+  onSchedule?: (post: ThreadPost, time: string) => void;
 }
 
-const ThreadCard: React.FC<ThreadCardProps> = ({ post, mood, scene, onCopy }) => {
+const ThreadCard: React.FC<ThreadCardProps> = ({ post, mood, scene, onCopy, onSchedule }) => {
   // Local state to handle edits
   const [currentPost, setCurrentPost] = useState<ThreadPost>(post);
   const [isEditing, setIsEditing] = useState(false);
@@ -25,6 +26,12 @@ const ThreadCard: React.FC<ThreadCardProps> = ({ post, mood, scene, onCopy }) =>
 
   // State for copy feedback
   const [hasCopied, setHasCopied] = useState(false);
+  
+  // State for schedule feedback & modal
+  const [isScheduled, setIsScheduled] = useState(false);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [scheduleDate, setScheduleDate] = useState("");
+  const [scheduleTime, setScheduleTime] = useState("09:00");
 
   // --- Interaction States ---
   const [likeCount, setLikeCount] = useState(() => Math.floor(Math.random() * 450) + 12);
@@ -45,6 +52,8 @@ const ThreadCard: React.FC<ThreadCardProps> = ({ post, mood, scene, onCopy }) =>
     setIsEditing(false);
     setGeneratedImage(null);
     setHasCopied(false);
+    setIsScheduled(false);
+    setShowScheduleModal(false);
     
     // Reset Interactions
     setIsLiked(false);
@@ -74,6 +83,38 @@ const ThreadCard: React.FC<ThreadCardProps> = ({ post, mood, scene, onCopy }) =>
     setTimeout(() => {
         setHasCopied(false);
     }, 2000);
+  };
+
+  // Open the custom schedule modal with default values (Tomorrow 9:00)
+  const handleScheduleClick = () => {
+    if (!onSchedule) return;
+    
+    // Calculate "Tomorrow" based on local time to avoid UTC timezone issues
+    const now = new Date();
+    const tomorrow = new Date(now);
+    tomorrow.setDate(now.getDate() + 1);
+    
+    // Manual formatting to ensure YYYY-MM-DD in local time
+    const year = tomorrow.getFullYear();
+    const month = String(tomorrow.getMonth() + 1).padStart(2, '0');
+    const day = String(tomorrow.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
+    
+    setScheduleDate(dateStr);
+    setScheduleTime("09:00");
+    setShowScheduleModal(true);
+  };
+
+  const confirmSchedule = () => {
+    if (!onSchedule || !scheduleDate || !scheduleTime) return;
+    
+    // Format: "2023-10-27 09:00"
+    const formattedTime = `${scheduleDate} ${scheduleTime}`;
+    
+    onSchedule(currentPost, formattedTime);
+    setIsScheduled(true);
+    setShowScheduleModal(false);
+    setTimeout(() => setIsScheduled(false), 2000);
   };
 
   // --- Interaction Handlers ---
@@ -122,12 +163,8 @@ const ThreadCard: React.FC<ThreadCardProps> = ({ post, mood, scene, onCopy }) =>
 
   const toggleImageInput = () => {
       if (generatedImage) {
-          // Improve UX: Directly clear image and show input with PRESERVED settings.
-          // Don't reset prompt or style, so user can tweak what they just generated.
           setGeneratedImage(null);
           setShowImageInput(true);
-          
-          // Only init prompt if it's completely missing
           if (!imagePrompt) setImagePrompt(currentPost.content);
       } else {
           if (!showImageInput) {
@@ -162,7 +199,13 @@ const ThreadCard: React.FC<ThreadCardProps> = ({ post, mood, scene, onCopy }) =>
     setIsEditing(false);
   };
 
+  // Helper to detect if the generated content is a video (Blob URL)
+  const isVideo = (url: string) => {
+      return url.startsWith('blob:');
+  };
+
   return (
+    <>
     <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 mb-4 transition-all hover:border-neutral-700 shadow-sm relative group">
       <div className="flex gap-3">
         {/* Avatar Placeholder */}
@@ -226,10 +269,25 @@ const ThreadCard: React.FC<ThreadCardProps> = ({ post, mood, scene, onCopy }) =>
                 {currentPost.content}
               </div>
 
-              {/* Generated Image Display */}
+              {/* Generated Image/Video Display */}
               {generatedImage && (
-                <div className="mt-2 mb-3 rounded-xl overflow-hidden border border-neutral-800">
-                    <img src={generatedImage} alt="Generated visual" className="w-full h-auto object-cover max-h-80" />
+                <div className="mt-2 mb-3 rounded-xl overflow-hidden border border-neutral-800 bg-black">
+                    {isVideo(generatedImage) ? (
+                        <video 
+                            src={generatedImage} 
+                            autoPlay 
+                            loop 
+                            muted 
+                            playsInline 
+                            className="w-full h-auto object-cover max-h-80"
+                        />
+                    ) : (
+                        <img 
+                            src={generatedImage} 
+                            alt="Generated visual" 
+                            className="w-full h-auto object-cover max-h-80" 
+                        />
+                    )}
                 </div>
               )}
 
@@ -274,7 +332,10 @@ const ThreadCard: React.FC<ThreadCardProps> = ({ post, mood, scene, onCopy }) =>
                             disabled={isGeneratingImg || !imagePrompt.trim()}
                             className="bg-white text-black text-xs font-bold px-3 py-1.5 rounded-full disabled:opacity-50 hover:bg-neutral-200 transition-colors"
                         >
-                            {isGeneratingImg ? '繪製中...' : '生成圖片'}
+                            {isGeneratingImg 
+                                ? (imageStyle === ImageStyle.ANIMATED ? '製作動圖中...' : '繪製中...') 
+                                : (imageStyle === ImageStyle.ANIMATED ? '生成動圖' : '生成圖片')
+                            }
                         </button>
                     </div>
                 </div>
@@ -375,25 +436,97 @@ const ThreadCard: React.FC<ThreadCardProps> = ({ post, mood, scene, onCopy }) =>
           >
             {generatedImage ? '重製圖片' : '配圖'}
           </button>
+          {onSchedule && (
+              <button 
+                onClick={handleScheduleClick}
+                className={`${
+                    isScheduled
+                    ? "bg-purple-500 text-white border-purple-500"
+                    : "bg-black text-white border-neutral-700 hover:border-neutral-500"
+                } text-xs font-bold px-3 py-1.5 rounded-full shadow-lg transition-all`}
+                title="加入排程"
+              >
+                {isScheduled ? "已加入" : "排程"}
+              </button>
+          )}
           <button 
             onClick={handleShare}
             className="bg-black text-white border border-neutral-700 hover:border-neutral-500 text-xs font-bold px-3 py-1.5 rounded-full shadow-lg transition-all"
           >
             分享
           </button>
-          <button 
-            onClick={handleCopyClick}
-            className={`${
-              hasCopied 
-                ? "bg-green-500 text-white hover:bg-green-600 border-green-500" 
-                : "bg-white text-black hover:bg-neutral-200 border-transparent"
-            } border text-xs font-bold px-3 py-1.5 rounded-full shadow-lg transition-all duration-200`}
-          >
-            {hasCopied ? "已複製！" : "複製"}
-          </button>
+          <div className="relative">
+            <button 
+                onClick={handleCopyClick}
+                className={`${
+                hasCopied 
+                    ? "bg-green-500 text-white hover:bg-green-600 border-green-500" 
+                    : "bg-white text-black hover:bg-neutral-200 border-transparent"
+                } border text-xs font-bold px-3 py-1.5 rounded-full shadow-lg transition-all duration-200`}
+            >
+                {hasCopied ? "已複製！" : "複製"}
+            </button>
+            {hasCopied && (
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-neutral-800 text-white text-[10px] font-bold rounded-md shadow-lg whitespace-nowrap animate-fade-in pointer-events-none">
+                    已複製！
+                    <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-neutral-800"></div>
+                </div>
+            )}
+          </div>
         </div>
       )}
     </div>
+
+    {/* Schedule Modal */}
+    {showScheduleModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in" onClick={() => setShowScheduleModal(false)}>
+            <div className="bg-neutral-900 border border-neutral-700 rounded-2xl p-6 w-full max-w-sm shadow-2xl relative" onClick={e => e.stopPropagation()}>
+                <div className="flex justify-between items-center mb-5">
+                    <h3 className="text-white font-bold text-lg">📅 排程發佈</h3>
+                    <button onClick={() => setShowScheduleModal(false)} className="text-neutral-500 hover:text-white">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </div>
+                
+                <div className="space-y-4 mb-6">
+                    <div>
+                        <label className="text-xs text-neutral-400 mb-1.5 block font-bold">日期</label>
+                        <input 
+                            type="date" 
+                            value={scheduleDate}
+                            onChange={(e) => setScheduleDate(e.target.value)}
+                            className="w-full bg-black border border-neutral-700 rounded-lg px-3 py-2.5 text-white focus:border-neutral-500 outline-none text-sm [color-scheme:dark]"
+                        />
+                    </div>
+                    <div>
+                        <label className="text-xs text-neutral-400 mb-1.5 block font-bold">時間</label>
+                        <input 
+                            type="time" 
+                            value={scheduleTime}
+                            onChange={(e) => setScheduleTime(e.target.value)}
+                            className="w-full bg-black border border-neutral-700 rounded-lg px-3 py-2.5 text-white focus:border-neutral-500 outline-none text-sm [color-scheme:dark]"
+                        />
+                    </div>
+                </div>
+                
+                <div className="flex gap-2 justify-end pt-2">
+                    <button 
+                        onClick={() => setShowScheduleModal(false)}
+                        className="px-4 py-2 text-sm text-neutral-400 hover:text-white transition-colors"
+                    >
+                        取消
+                    </button>
+                    <button 
+                        onClick={confirmSchedule}
+                        className="bg-white text-black text-sm font-bold px-5 py-2 rounded-full hover:bg-neutral-200 transition-colors"
+                    >
+                        確認加入
+                    </button>
+                </div>
+            </div>
+        </div>
+    )}
+    </>
   );
 };
 
