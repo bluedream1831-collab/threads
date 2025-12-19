@@ -14,38 +14,44 @@ export enum Scene {
   RELATIONSHIP = "感情生活",
   DAILY = "日常生活",
   WEEKEND = "週末假期",
-  TRENDING = "時事跟風"
+  TRENDING = "時事跟風",
+  POLICY = "台灣政策",
+  WELFARE = "社會福利",
+  LABOR = "勞保/勞權",
+  RETIREMENT = "退休/退休金",
+  FOOD_KH = "高雄美食",
+  FOOD_TW = "台灣美食",
+  TW_EVENTS = "台灣大事",
+  KH_EVENTS = "高雄大事",
+  KH_CLIMATE = "高雄氣候",
+  INTL_EVENTS = "國際大事",
+  ASIA_EVENTS = "亞洲大事"
 }
 
-export enum ImageStyle {
-  DEFAULT = "預設氛圍",
-  ANIMATED = "動態迷因 (GIF)",
-  JAPANESE = "日系空氣感",
-  KOREAN = "韓系奶油",
-  REALISTIC = "超寫實攝影",
-  ILLUSTRATION = "溫馨插畫",
-  CYBERPUNK = "賽博龐克",
-  VINTAGE = "復古底片"
+export enum ModelVersion {
+  V3_FLASH = "gemini-3-flash-preview",
+  V2_5_FLASH = "gemini-2.5-flash"
 }
 
 export interface ThreadPost {
   content: string;
   tags: string[];
+  visualPrompt: string; // 用於生圖的 AI 提示詞
 }
 
 export interface ScheduledPost extends ThreadPost {
   id: string;
-  scheduledTime: string; // e.g., "明天早上 9:00"
+  scheduledTime: string;
   createdAt: number;
 }
 
 export interface GenerateRequest {
   mood: Mood;
   scene: Scene;
-  customTopic?: string;
+  keywords?: string[];
+  modelVersion: ModelVersion;
 }
 
-// Schema definition for the AI response
 export const threadResponseSchema = {
   type: Type.ARRAY,
   items: {
@@ -53,14 +59,18 @@ export const threadResponseSchema = {
     properties: {
       content: {
         type: Type.STRING,
-        description: "The main text content of the Threads post. Should be engaging and natural.",
+        description: "The main text content of the Threads post.",
       },
       tags: {
         type: Type.ARRAY,
         items: { type: Type.STRING },
-        description: "Relevant hashtags without the # symbol.",
+        description: "Relevant hashtags.",
       },
+      visualPrompt: {
+        type: Type.STRING,
+        description: "A detailed English prompt for AI image generators (like Midjourney) that matches the post's mood and scene.",
+      }
     },
-    required: ["content", "tags"],
+    required: ["content", "tags", "visualPrompt"],
   },
 };
